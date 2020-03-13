@@ -1,5 +1,5 @@
 # Capital_Bikeshare
- Predictive Data Analysis in R
+ Predictive Data Analysis in R - (simple linear regression) 
  
  Data Description:
  We will use data from DC’s Capital Bikeshare (also serves Maryland and Virginia). Capital
