@@ -1,0 +1,362 @@
+---
+title: "R Notebook"
+output:
+  word_document: default
+  pdf_document:
+    latex_engine: xelatex
+  html_notebook: default
+always_allow_html: yes
+---
+The goal of this assignment is to get you started with predictive analytics on city bikeshare data. Weu will first prepare
+and explore the data, and run a basic regression. We will then predict the variable COUNT as a function of the other variables. We will also determine the effect of bad weather on the number of bikes rented. Finally, you will build alternative models, measure and compare their predictive performance, make data-informed and data-driven inferences for a business case.
+
+```{r setup, include=FALSE}
+
+# This chunk shows/hides the code in your final report. When echo = TRUE, the code
+# is shown in the report. When echo = FALSE, the code is hidden from the final report.
+# We would like to see your code, so please leave the setting as is during the course.
+# This chunk will not show up in your reports, so you can safely ignore its existence.
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+We will install basic libraries for the analysis in R and analyze the data step by step
+
+```{r}
+#setwd("C:/") #Don't forget to set your working directory before you start!
+
+library("tidyverse")
+library("tidymodels")
+library("plotly")
+library("skimr")
+library("lubridate")
+
+```
+1. a) Data preparation
+```{r}
+dfbOrg <- read_csv("assignment2BikeShare.csv")
+skim(dfbOrg)
+```
+1.a.
+```{r}
+dfbOrg<-
+  dfbOrg %>%
+  mutate(Count = CASUAL + REGISTERED, MONTH = months(DATE))
+dfbOrg
+```
+1.b.Scale the data (and save it as dfbStd ): Start by standardizing the four variables,
+TEMP, ATEMP, HUMIDITY, WINDSPEED.
+```{r}
+dfbStd <- cbind.data.frame(dfbOrg[1:4], scale(dfbOrg[5:8]), dfbOrg[9:12])
+dfbStd
+```
+Q. 2 Basic regression in R: In dfbStd, run a regression model fitAll using COUNT as the DV,
+and all the variables as independent variables.
+```{r}
+fitAll <- lm(formula = Count ~ ., data = dfbStd)
+summary(fitAll)
+```
+a) Does this appear to be a good model? Why or why not?
+Fitall by keeping all the variables in model,
+Output shows, model with R square and adjusted R square equal to 1, but this is
+not good model. Because, dependent variable Count itself is derived from sum
+of the two independent variables registered and casual present in the regression
+equation.
+b) According to your model, what is the effect of humidity on the total bike count in
+a formal interpretation? Does this finding align with your answer to Part (a)?
+On average unite change in humidity corresponds to 1.400e-13
+change in count of bike users, keeping everything else constant.
+
+3.
+3.a.
+```{r}
+dfbOrg<-
+  dfbOrg %>% 
+  mutate(BADWEATHER =  ifelse(WEATHERSIT == 3 | WEATHERSIT == 4, 'YES', 'NO'))
+```
+
+```{r}
+dfbOrg
+```
+3.b.
+```{r}
+plot1<-
+  dfbOrg %>% 
+  ggplot(aes(x = ATEMP, y = Count, color = BADWEATHER)) +
+  geom_point()
+
+ggplotly(plot1)
+```
+For bad weather, count of city bikes used in any temperature is comparatively
+less than that of the city bikes used in good weather.
+
+3.c.
+```{r}
+plot2<-
+  dfbOrg %>% 
+  ggplot(aes(x = ATEMP, y = CASUAL, color = BADWEATHER)) +
+  geom_point()
+
+ggplotly(plot2)
+```
+
+```{r}
+plot3<-
+  dfbOrg %>% 
+  ggplot(aes(x = ATEMP, y = REGISTERED, color = BADWEATHER)) +
+  geom_point()
+
+ggplotly(plot3)
+```
+
+iv.Keep ATEMP in the x-axis, but change the y-axis to COUNT. Remove the color variable and add a geom_smooth() without any parameters. How does the overall relationship between temperature and bike usage look? Does this remind you of Lab 2? Why do you think the effects are similar?
+
+c) Make two more scatterplots (and continue using the differentiated coloring for BADWEATHER) by keeping ATEMP on the x-axis and changing the variable on the y-axis: One plot for CASUAL and another for REGISTERED. Given the plots:
+
+i) How is temperature associated with casual usage? Is that different from how it is associated with registered usage?
+For casual users, as the temperature increases variance in count of casual users increases, we see datapoints scattered and distant from each other. Whereas for Registered user it is different, distribution is uniform with increase in temperature and less variance with respect to casual users.
+
+ii) How is bad weather associated with casual usage? Is that different from how it is associated with registered usage?
+For bad weather and equal temperature, we see a smaller number of casual users as compared to registered users. During bad weather and low temperatures, we see few or negligible number of casual usages. But this count increase somewhat around temperature 20 degrees. After that we see almost no casual usage after approx 23 degrees due to bad weather conditions.
+
+iii) Do your answers in (i) and (ii) make logical sense? Why or why not?
+Yes, because registered bikeshare members are more inclined towards using city bike in any temperature / weather conditions. Whereas casual bike users are not.
+
+iv) Keep ATEMP in the x-axis, but change the y-axis to COUNT. Remove the color variable and add a geom_smooth() without any parameters. How does the overall relationship between temperature and bike usage look? Does this remind you of Lab 2? Why do you think the effects are similar?
+Yes, it appears similar to that of lab2. It signifies that, we see maximum count of trips when temperature is moderate, not too high not too low. whereas for extreme temperature bikeshare usage is comparatively less.Because users are more interested to use city bike in moderate temperature, but when it gets too hot or too cold, they simply avoid commute using city bikes.
+
+```{r}
+plot4<-
+  dfbOrg %>% 
+  ggplot(aes(x = ATEMP, y = Count)) +
+  geom_point() + 
+  geom_smooth()
+
+ggplotly(plot4)
+```
+
+
+4. More linear regression: Using dfbOrg, run another regression for COUNT using the variables MONTH, WEEKDAY, BADWEATHER, TEMP, ATEMP, and HUMIDITY.
+
+```{r}
+fit2 <- lm(Count ~ MONTH + WEEKDAY + BADWEATHER + TEMP + ATEMP + HUMIDITY, data = dfbOrg)
+summary(fit2)
+```
+a) What is the resulting adjusted R2? What does it mean?
+Answer:
+0.521, It means that this model explains around 52.1% variation in Count of
+bikeshare usage with the help of independent variables.
+
+b) State precisely how BADWEATHER is associated with the predicted COUNT.
+Answer:
+On average, number of rides with bad weather are less than 1954.835 of that of the number of rides with good weather keeping everything else constant
+
+c) What is the predicted count of rides on a weekday in January, when the weather is BAD, and the temperature is 20o and feels like 18o, and the humidity is 60%?
+Answer:
+2520.506 = i.e. approximately 2521
+
+d) Do you have any concerns about this model or your predicted COUNT in Q3-c? Why or why not?
+Answer:
+The count according to the plot is comparatively higher than as predicted by the model, in plot count is around 2800-7500. This raises concerns about the accuracy of the model.
+
+5.Regression diagnostics: Run the regression diagnostics for the model developed in Q4. Discuss whether the model complies with the assumptions of multiple linear regression. If you think you can mitigate a violation, take action, and check the diagnostics again.
+```{r}
+plot(fit2)
+```
+```{r}
+car::vif(fit2)
+
+```
+```{r}
+
+#rectification of multicollinerlity
+#Dropping Temp variable
+
+fit2 <- lm(Count ~ WEEKDAY + BADWEATHER+ HUMIDITY + ATEMP + MONTH, data = dfbOrg)
+car::vif(fit2)
+summary(fit2)
+```
+Answer:
+Plot () diagnostic results:
+• From residual vs fitted plot, model is catching non-linear relationships.
+• From Normal Q-Q plot, residual is no aligned with dotted line hence normality
+assumption of linear equation may be violated.
+• From graph of standardized residuals, we see points are not fanned out. Hence
+no heteroscedasticity.
+• From last graph, we see there are some outliers beyond cook’s distance line,
+hence they might affect overall coefficients of regression equation.
+VIF diagnostic results:
+VIF for TEMP, ATMP, MONTH is very high. Let us remove TEMP, to improve performance
+of model.
+
+6.Even more regression: Run a simple linear regression to determine the effect of bad weather on COUNT when none of the other variables is included in the model.
+
+a.Compare the coefficient with the corresponding value in Q4. Are they different? Why or why not?
+Answer:
+Yes, coefficient of BADWEATHERYES is less than that of previous model. Because
+the coefficient of BADWETHER is impacted because of other independent
+variables in model.
+
+```{r}
+fit3 <- lm(Count~BADWEATHER, data = dfbOrg)
+summary(fit3)
+```
+b) A consultant has indicated that bike use is affected differently by bad weather on weekdays versus non-weekdays, as people go to work on weekdays. How can you add this domain knowledge to the regression model you built in (a)? Why?
+Answer:
+We can add interaction term between two variables i.e. BADWEATHER and
+WEEKDAY. In order to corporate effect of interaction between weekdays and
+bad weather in combination on count of bikeshare.
+
+6.c.Run a new model with your addition from (b). Is this a better or worse model than your original model in (a)? How do you decide?
+Answer:
+R squared and adjusted squared values are not improved allot. Also, anova comparison show high p values thus additional interaction term does not really adds any significant value to the model.
+```{r}
+fit4 <- lm(Count~BADWEATHER + WEEKDAY + (BADWEATHER * WEEKDAY) , data = dfbOrg)
+summary(fit4)
+
+anova(fit3, fit4)
+```
+Using your model from (c),
+i) interpret the average effect of bad weather on the COUNT depending on whether it is a weekday or not, and
+Answer:
+On average, count of city bike with bad weather is 2637.1 less than that of count of city bikes with good weather and it is not a weekday keeping everything else constant.
+
+ii) quantify the effect of bad weather on the COUNT in different scenarios (be sure to calculate all effect sizes for the four alternatives (2x2) here).
+• On average count of city bike usage with bad weather is 2637.1 less than that of
+count of city bikes with good weather and weather it is not a weekday, keeping
+everything else constant.
+• On average, count of bike usage is 185.3 more on weekdays as compared to when
+the weather is good and it is not a weekday, keeping everything else as constant
+• On average, count of bike usage is 201.2 less on bad weather weekday as compared
+to that of good weather non weekday, keeping everything else constant.
+• BadweatherNO & WeekdayNo is reference category.
+
+7.Predictive analytics:
+7.a.
+```{r}
+set.seed(333)
+```
+
+7.b.
+```{r}
+dfwTrain <- dfbOrg %>% sample_frac(.8)
+
+dfwTest <- dplyr::setdiff(dfbOrg, dfwTrain)
+```
+
+7.c.
+```{r}
+
+fitOrg <- lm(Count ~ MONTH + WEEKDAY + BADWEATHER  + ATEMP + HUMIDITY, data = dfwTrain)
+
+summary(fitOrg)
+
+tidy(fitOrg)
+
+resultsOrg <- dfwTest %>%
+  			mutate(predictedCount = predict(fitOrg, dfwTest))
+resultsOrg
+
+performance <- 
+   metric_set(rmse, mae)
+performance(resultsOrg, truth= Count, estimate = predictedCount)
+
+```
+```{r}
+fitNew <- lm(Count ~ MONTH + WEEKDAY + BADWEATHER + ATEMP + WINDSPEED, data = dfwTrain)
+
+summary(fitNew)
+
+tidy(fitNew)
+
+resultsNew <- dfwTest %>%
+  			mutate(predictedCount = predict(fitNew, dfwTest))
+resultsNew
+
+performance <- 
+   metric_set(rmse, mae)
+performance(resultsNew, truth= Count, estimate = predictedCount)
+```
+```{r}
+# comparision of two models
+summary(fitOrg)
+summary(fitNew)
+```
+First model fitOrg, is better for predictive analytics. As when we compare the RMSE and
+MAE values, these are lower than that of fitNew model. For exploratory analysis as well fitOrg is better because it has better values of R square
+ad adjusted R square.
+
+8. More predictive analytics: In this final question, experiment with the time component. In a way, you will almost treat the data as a time series. We will cover time series data later, so this is just a little experiment. Taking into account date, you can’t split your data randomly (well, evidently, you would not want to use future data to predict the past). Instead, you have to split your data by time. Start with dfbOrg and use the variables you used in fitOrg from Q7c. Split your data into training using the year “2011” data, and test using the “2012” data. Has the performance improved over the random split that assumed cross-sectional data? Why do you think so? Split again by assigning 1.5 years of data to the training set and 6 months of data to the test set. Does this look any better? Discuss your findings.
+
+```{r}
+dfwTrain <-
+  dfbOrg %>% 
+  filter(as.numeric(format(DATE,'%Y')) == 2011)
+
+dfwTest <- dfbOrg %>% 
+  filter(as.numeric(format(DATE,'%Y')) == 2012)
+```
+
+```{r}
+fitNew2 <- lm(Count ~ MONTH + WEEKDAY + BADWEATHER + TEMP + ATEMP, data = dfwTrain)
+
+summary(fitNew2)
+
+tidy(fitNew2)
+
+resultsNew2 <- dfwTest %>%
+  			mutate(predictedCount2 = predict(fitNew2, dfwTest))
+resultsNew2
+
+performance <- 
+   metric_set(rmse, mae)
+performance(resultsNew2, truth= Count, estimate = predictedCount2)
+
+```
+
+
+```{r}
+
+dfwTrainPart3 <- subset(dfbOrg, DATE>= "2011-01-01" & DATE <= "2012-06-30")
+
+dfwTestPart3 <- subset(dfbOrg, DATE>= "2012-07-01")
+
+
+fitNew3 <- lm(Count ~ MONTH + WEEKDAY + BADWEATHER + TEMP + ATEMP, data = dfwTrainPart3)
+
+summary(fitNew3)
+
+tidy(fitNew3)
+
+resultsNew3 <- dfwTestPart3 %>%
+  			mutate(predictedCount3 = predict(fitNew3, dfwTestPart3))
+resultsNew3
+
+performance <- 
+   metric_set(rmse, mae)
+performance(resultsNew3, truth= Count, estimate = predictedCount3)
+
+```
+No, performance has not been improved over random split of data RMSE and MAE values are more than FitNEW model of Q.7.
+As we have used continuous data set, to predict future values. It is causing overfitting of data hence for future predictions we are getting more error. No, the performance has not been improved yet. RMSE and MAE values have increased.
+
+9) Data-informed decision making: Based on your quick analysis of the Capital Bikeshare data, what are some actions you would take if you were managing Capital Bikeshare’s pricing and promotions? How do you think you would use your predictions?
+Answer:
+• Provide offers to the casual bike users when temperature is high and whether is
+bad
+• When temperature is extreme (too high or too low), will try to provide more
+discounts and promote city bike use to increase the count
+• Provide incentives to users in order to get registered with city bikes, because
+registered user have high chances of boosting city bike usage in any temperature
+and weather conditions as compare to casual users.
+• From model fit2, we see month of January, February, July, November, October
+and September have lower p-value, hence significant in defining Count/Usage.
+• We can see coefficients are positive for months November, October and
+September, thus we can charge more in this month to increase revenue.
+
+10) Data-driven solutions to “the” big challenge of bikeshare:
+We can collect data regarding number of bikes available at each station every 15 mins, depending on that we can predict number of drop-off and pick-up probabilities at each station.
+• Depending on this probability we can make decision to add more bikes to or take out bikes from that bike hub.
+• We can track each user’s day to day commuting path, pick-up hub and drop-off hub & corresponding timings, based on this data we can cluster users. We can use this information for rebalancing purpose.
+• There are some of the stations in image with same number of bikes in the morning and evening. Which Means those have not been used actively by users. We can either eliminate these stations and save unnecessary efforts in rebalancing and also save on cost of unused bikes at each station.
